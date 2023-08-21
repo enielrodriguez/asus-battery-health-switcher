@@ -18,7 +18,7 @@ See [Enable Asus Battery Health Charging (Charging Threshold) in Linux](https://
 ## Install
 
 ### KDE Store
-[Asus® Battery Health Switcher - KDE Store](TODO)
+[Asus® Battery Health Switcher - KDE Store](https://store.kde.org/p/2075212/)
 
 ### Manual
 - Download/clone this repo.
