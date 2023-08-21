@@ -8,7 +8,7 @@ Asus® Battery Health Switcher
 </div>
 <br>
 
-# Conservation Mode Switcher
+# Asus® Battery Health Switcher
 KDE Plasma widget to turn on/off the Battery Health Charging feature in compatible Asus® laptops.
 
 ## Install
