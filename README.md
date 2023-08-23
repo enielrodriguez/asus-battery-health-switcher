@@ -11,7 +11,7 @@ Asus® Battery Health Switcher
 # Asus® Battery Health Switcher
 KDE Plasma widget to configure the Battery Health Charging feature in compatible Asus® laptops.  
 The available modes are **"full" (100%)**, **"balanced" (80%)** and **"maximum" (60%)**.  
-For more information see ["ASUS Battery Health Charging - Introduction"](https://www.asus.com/us/support/FAQ/1032726/)
+For more information see ["ASUS Battery Health Charging"](https://www.asus.com/us/support/FAQ/1032726/)
 
 Keep in mind that according to some reports of users on the Internet this mode is automatically disabled after rebooting. 
 To make it permanent you can do it for example with a cronjob **(with that you would not need this widget)**.  
