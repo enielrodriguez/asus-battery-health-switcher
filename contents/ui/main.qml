@@ -17,8 +17,9 @@ Item {
 
     readonly property var const_COMMANDS: ({
         "query": "cat " + root.batteryHelthConfigPath,
-        "on": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-        "off": "echo 100 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
+        "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
+        "balanced": "echo 80 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
+        "full": "echo 100 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
         "findBatteryHelthConfigFile": "find /sys -name \"charge_control_end_threshold\"",
         "findNotificationTool": "find /usr -type f -executable \\( -name \"notify-send\" -o -name \"zenity\" \\)",
         // defined in findNotificationTool Connection
@@ -26,13 +27,14 @@ Item {
     })
 
     property var icons: ({
-        "on": Qt.resolvedUrl("./image/on.png"),
-        "off": Qt.resolvedUrl("./image/off.png"),
+        "maximum": Qt.resolvedUrl("./image/maximum.png"),
+        "balanced": Qt.resolvedUrl("./image/balanced.png"),
+        "full": Qt.resolvedUrl("./image/full.png"),
         "error": Qt.resolvedUrl("./image/error.png")
     })
 
     // This values can change after the execution of onCompleted().
-    property string currentStatus: "off"
+    property string currentStatus: "full"
     property bool isCompatible: false
 
     property string desiredStatus
@@ -163,15 +165,15 @@ Item {
     Connections {
         target: queryStatusDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
+            root.loading = false
 
             if (stderr) {
                 root.icon = root.icons.error
                 showNotification(root.icons.error, stderr, stderr)
             } else {
-                var status = stdout.trim()
-                root.currentStatus = status === "60"? "on" : "off"
+                var value = stdout.trim()
+                root.currentStatus = value === "60" ? "maximum" : value === "80" ? "balanced" : "full"
                 root.isCompatible = true
-                root.loading = false
             }
         }
     }
@@ -237,7 +239,7 @@ Item {
         queryStatusDataSource.exec(const_COMMANDS.query)
     }
 
-    // status = "on"|"off"
+    // status = "full"|"balanced"|"maximum"
     function switchStatus(status: string) {
         root.desiredStatus = status
         root.loading = true
@@ -305,17 +307,27 @@ Item {
 
             PlasmaComponents3.Label {
                 Layout.alignment: Qt.AlignCenter
-                text: root.isCompatible ? i18n("Battery Health Charging is %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
+                text: root.isCompatible ? i18n("Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
             }
 
 
-            PlasmaComponents3.Switch {
+            PlasmaComponents3.ComboBox {
                 Layout.alignment: Qt.AlignCenter
 
                 enabled: !root.loading && root.isCompatible
-                checked: root.currentStatus === "on"
-                onClicked: {
-                    switchStatus(checked ? "on" : "off")
+                model: [
+                    {text: "Full Capacity", value: "full"},
+                    {text: "Balanced (80%)", value: "balanced"},
+                    {text: "Maximum Lifespan (60%)", value: "maximum"}
+                ]
+                textRole: "text"
+                valueRole: "value"
+                currentIndex: model.findIndex((element) => element.value === root.currentStatus)
+
+                onCurrentIndexChanged: {
+                    if (currentValue && currentValue !== root.currentStatus) {
+                        switchStatus(currentValue)
+                    }
                 }
             }
 
@@ -329,5 +341,5 @@ Item {
     }
 
     Plasmoid.toolTipMainText: i18n("Switch Battery Health Charging.")
-    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Battery Health Charging is %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
+    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
 }
