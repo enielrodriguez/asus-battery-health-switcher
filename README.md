@@ -23,7 +23,7 @@ See [Battery Charging limiter Linux (ASUS Laptops)](https://github.com/sreejitha
 
 Note that there are two versions:
 - Version **0.0.1** only gives two possible modes, **on** (60%) or **off** (100%).
-- The other version gives three possible modes, **full** (100%), **balanced** (80%) and **maximum** (60%).
+- The other version gives three possible modes, **maximum** (60%), **balanced** (80%) and **full** (100%).
 
 ### Manual
 - Download/clone this repo.
