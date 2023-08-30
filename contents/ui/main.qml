@@ -18,7 +18,7 @@ Item {
         "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
         "balanced": "echo 80 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
         "full": "echo 100 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-        "findBatteryHelthConfigFile": "find /sys -name \"charge_control_end_threshold\"",
+        "findBatteryHelthConfigFile": "find /home/eniel -name \"charge_control_end_threshold\"",
         "findNotificationTool": "find /usr -type f -executable \\( -name \"notify-send\" -o -name \"zenity\" \\)",
         // defined in findNotificationTool Connection
         "sendNotification": () => ""
@@ -181,6 +181,13 @@ Item {
         target: setStatusDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
             root.loading = false
+
+
+            if(exitCode === 127){
+                showNotification(root.icons.error, i18n("Root privileges are required."))
+                root.desiredStatus = root.currentStatus
+                return
+            }
 
             if (stderr) {
                 showNotification(root.icons.error, stderr, stdout)
