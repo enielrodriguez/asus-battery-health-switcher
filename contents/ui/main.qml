@@ -13,8 +13,6 @@ Item {
 
     property string batteryHelthConfigPath
 
-    readonly property string const_ZERO_TIMEOUT_NOTIFICATION: " -t 0"
-
     readonly property var const_COMMANDS: ({
         "query": "cat " + root.batteryHelthConfigPath,
         "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
@@ -37,7 +35,7 @@ Item {
     property string currentStatus: "full"
     property bool isCompatible: false
 
-    property string desiredStatus
+    property string desiredStatus: "full"
     property bool loading: false
 
     property string icon: root.icons[root.currentStatus]
@@ -172,7 +170,7 @@ Item {
                 showNotification(root.icons.error, stderr, stderr)
             } else {
                 var value = stdout.trim()
-                root.currentStatus = value === "60" ? "maximum" : value === "80" ? "balanced" : "full"
+                root.currentStatus = root.desiredStatus = value === "60" ? "maximum" : value === "80" ? "balanced" : "full"
                 root.isCompatible = true
             }
         }
@@ -183,6 +181,13 @@ Item {
         target: setStatusDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
             root.loading = false
+
+
+            if(exitCode === 127){
+                showNotification(root.icons.error, i18n("Root privileges are required."))
+                root.desiredStatus = root.currentStatus
+                return
+            }
 
             if (stderr) {
                 showNotification(root.icons.error, stderr, stdout)
@@ -239,17 +244,15 @@ Item {
         queryStatusDataSource.exec(const_COMMANDS.query)
     }
 
-    // status = "full"|"balanced"|"maximum"
-    function switchStatus(status: string) {
-        root.desiredStatus = status
+    function switchStatus() {
         root.loading = true
 
-        showNotification(root.icons[status], i18n("Switching status to %1.", status.toUpperCase()))
+        showNotification(root.icons[root.desiredStatus], i18n("Switching status to %1.", root.desiredStatus.toUpperCase()))
 
-        setStatusDataSource.exec(const_COMMANDS[status])
+        setStatusDataSource.exec(const_COMMANDS[root.desiredStatus])
     }
 
-    function showNotification(iconURL: string, message: string, title = i18n("Battery Health Switcher"), options = const_ZERO_TIMEOUT_NOTIFICATION){
+    function showNotification(iconURL: string, message: string, title = i18n("Asus Battery Health Switcher"), options = ""){
         sendNotification.exec(const_COMMANDS.sendNotification(title, message, iconURL, options))
     }
 
@@ -307,7 +310,7 @@ Item {
 
             PlasmaComponents3.Label {
                 Layout.alignment: Qt.AlignCenter
-                text: root.isCompatible ? i18n("Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
+                text: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
             }
 
 
@@ -322,11 +325,12 @@ Item {
                 ]
                 textRole: "text"
                 valueRole: "value"
-                currentIndex: model.findIndex((element) => element.value === root.currentStatus)
+                currentIndex: model.findIndex((element) => element.value === root.desiredStatus)
 
                 onCurrentIndexChanged: {
-                    if (currentValue && currentValue !== root.currentStatus) {
-                        switchStatus(currentValue)
+                    root.desiredStatus = model[currentIndex].value
+                    if (root.desiredStatus !== root.currentStatus) {
+                        switchStatus()
                     }
                 }
             }
@@ -340,6 +344,6 @@ Item {
         }
     }
 
-    Plasmoid.toolTipMainText: i18n("Switch Battery Health Charging.")
-    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
+    Plasmoid.toolTipMainText: i18n("Switch Asus Battery Health Charging.")
+    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
 }
