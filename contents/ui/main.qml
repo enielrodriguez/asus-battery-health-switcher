@@ -13,8 +13,6 @@ Item {
 
     property string batteryHelthConfigPath
 
-    readonly property string const_ZERO_TIMEOUT_NOTIFICATION: " -t 0"
-
     readonly property var const_COMMANDS: ({
         "query": "cat " + root.batteryHelthConfigPath,
         "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
@@ -249,7 +247,7 @@ Item {
         setStatusDataSource.exec(const_COMMANDS[status])
     }
 
-    function showNotification(iconURL: string, message: string, title = i18n("Battery Health Switcher"), options = const_ZERO_TIMEOUT_NOTIFICATION){
+    function showNotification(iconURL: string, message: string, title = i18n("Battery Health Switcher"), options = ""){
         sendNotification.exec(const_COMMANDS.sendNotification(title, message, iconURL, options))
     }
 
