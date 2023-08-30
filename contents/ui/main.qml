@@ -252,7 +252,7 @@ Item {
         setStatusDataSource.exec(const_COMMANDS[root.desiredStatus])
     }
 
-    function showNotification(iconURL: string, message: string, title = i18n("Battery Health Switcher"), options = ""){
+    function showNotification(iconURL: string, message: string, title = i18n("Asus Battery Health Switcher"), options = ""){
         sendNotification.exec(const_COMMANDS.sendNotification(title, message, iconURL, options))
     }
 
@@ -310,7 +310,7 @@ Item {
 
             PlasmaComponents3.Label {
                 Layout.alignment: Qt.AlignCenter
-                text: root.isCompatible ? i18n("Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
+                text: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
             }
 
 
@@ -344,6 +344,6 @@ Item {
         }
     }
 
-    Plasmoid.toolTipMainText: i18n("Switch Battery Health Charging.")
-    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Battery Health Charging feature is not available.")
+    Plasmoid.toolTipMainText: i18n("Switch Asus Battery Health Charging.")
+    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
 }
