@@ -17,14 +17,21 @@ To make it permanent you can do it for example with a cronjob or with Systemd **
 
 ## Install
 
-### KDE Store
-[Asus® Battery Health Switcher - KDE Store](https://store.kde.org/p/2075212/)
+### Dependencies
+
+- One of the following tools is required for notifications to work. Note that in many distros at least one of the two is installed by default, check it out.
+  - [notify-send](https://www.commandlinux.com/man-page/man1/notify-send.1.html) - a program to send desktop notifications.
+  - [zenity](https://www.commandlinux.com/man-page/man1/zenity.1.html) - display GTK+ dialogs.
+
+### From KDE Store
+You can find it in your software center, in the subcategories `Plasma Addons > Plasma Widgets`.  
+Or you can download or install it directly from the [KDE Store](https://store.kde.org/p/2075212/) website.
 
 Note that there are two versions:
-- Version **0.0.1** only gives two possible modes, **on** (60%) or **off** (100%).
-- The other version gives three possible modes, **maximum** (60%), **balanced** (80%) and **full** (100%).
+- Version `0.0.1` only gives two possible modes, `on` (60%) or `off` (100%).
+- The other version gives three possible modes, `maximum` (60%), `balanced` (80%) and `full` (100%).
 
-### Manual
+### Manually
 - Download/clone this repo.
 - Run from a terminal the command `plasmapkg2 -i [widget folder name]`.
 
