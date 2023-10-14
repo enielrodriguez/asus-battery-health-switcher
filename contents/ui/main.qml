@@ -9,10 +9,13 @@ import org.kde.plasma.plasmoid 2.0
 Item {
     id: root
 
+    // Path to the pkexec command-line tool for gaining root privileges
     property string pkexecPath: "/usr/bin/pkexec"
 
+    // Path to the Asus Battery Health configuration file
     property string batteryHelthConfigPath: ""
 
+    // Icons for different status: "maximum," "balanced," "full," and "error"
     property var icons: ({
         "maximum": Qt.resolvedUrl("./image/maximum.png"),
         "balanced": Qt.resolvedUrl("./image/balanced.png"),
@@ -20,41 +23,53 @@ Item {
         "error": Qt.resolvedUrl("./image/error.png")
     })
 
-    // This values can change after the execution of onCompleted().
+    // This property represents the current Asus Battery Health Charging status
+    // Note: This value can change after the execution of onCompleted().
     property string currentStatus: "full"
+
+    // A flag indicating whether the widget is compatible with the system
     property bool isCompatible: false
 
     // The notification tool to use (e.g., "zenity" or "notify-send")
     property string notificationTool: ""
 
+    // The desired status for Asus Battery Health Charging
     property string desiredStatus: "full"
+
+    // A flag indicating if an operation is in progress
     property bool loading: false
 
+    // The currently displayed icon based on the current status
     property string icon: root.icons[root.currentStatus]
 
+    // Set the icon for the Plasmoid
     Plasmoid.icon: root.icon
 
+    // Connect to Plasmoid configuration to access user settings
     Connections {
         target: Plasmoid.configuration
     }
 
+    // Executed when the component is completed
     Component.onCompleted: {
         findNotificationTool()
         findBatteryHelthConfigFile()
     }
 
-
+    // CustomDataSource for querying the current Asus Battery Health Charging status
     CustomDataSource {
         id: queryStatusDataSource
         command: "cat " + root.batteryHelthConfigPath
     }
 
+    // CustomDataSource for setting the Asus Battery Health Charging status
     CustomDataSource {
         id: setStatusDataSource
 
         // Dynamically set in switchStatus(). Set a default value to avoid errors at startup.
         property string status: "full"
 
+        // Commands to set different Asus Battery Health Charging modes
         property var cmds: {
             "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
             "balanced": "echo 80 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
@@ -63,17 +78,19 @@ Item {
         command: cmds[status]
     }
 
+    // CustomDataSource for finding the notification tool (notify-send or zenity)
     CustomDataSource {
         id: findNotificationToolDataSource
         command: "find /usr -type f -executable \\( -name \"notify-send\" -o -name \"zenity\" \\)"
     }
 
+    // CustomDataSource for finding the Asus Battery Health configuration file
     CustomDataSource {
         id: findBatteryHelthConfigFileDataSource
         command: "find /sys -name \"charge_control_end_threshold\""
     }
 
-
+    // CustomDataSource for sending notifications
     CustomDataSource {
         id: sendNotification
 
@@ -93,6 +110,7 @@ Item {
     }
 
 
+    // Connection for handling the queryStatusDataSource
     Connections {
         target: queryStatusDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
@@ -110,6 +128,7 @@ Item {
     }
 
 
+    // Connection for handling the setStatusDataSource
     Connections {
         target: setStatusDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
@@ -132,6 +151,7 @@ Item {
     }
 
 
+    // Connection for finding the notification tool
     Connections {
         target: findNotificationToolDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
@@ -157,6 +177,7 @@ Item {
     }
 
 
+    // Connection for finding the Asus Battery Health configuration file
     Connections {
         target: findBatteryHelthConfigFileDataSource
         function onExited(exitCode, exitStatus, stdout, stderr){
@@ -173,12 +194,13 @@ Item {
     }
 
 
-    // Get the current status
+    // Get the current status by executing the queryStatusDataSource
     function queryStatus() {
         root.loading = true
         queryStatusDataSource.exec()
     }
 
+    // Switch Asus Battery Health Charging status
     function switchStatus() {
         root.loading = true
 
@@ -188,6 +210,7 @@ Item {
         setStatusDataSource.exec()
     }
 
+    // Show a notification with icon, message, and title
     function showNotification(iconURL: string, message: string, title = i18n("Asus Battery Health Switcher"), options = ""){
         sendNotification.tool = root.notificationTool
 
@@ -199,10 +222,12 @@ Item {
         sendNotification.exec()
     }
 
+    // Find the notification tool by executing the findNotificationToolDataSource
     function findNotificationTool() {
         findNotificationToolDataSource.exec()
     }
 
+    // Find the Asus Battery Health configuration file by executing the findBatteryHelthConfigFileDataSource
     function findBatteryHelthConfigFile() {
         // Check if the user defined the file path manually and use it if he did.
         if(Plasmoid.configuration.batteryHelthConfigFile){
@@ -213,8 +238,10 @@ Item {
 
     }
 
+    // Set the preferred representation of the Plasmoid to the compact representation
     Plasmoid.preferredRepresentation: Plasmoid.compactRepresentation
 
+    // Compact representation of the Plasmoid
     Plasmoid.compactRepresentation: Item {
         PlasmaCore.IconItem {
             height: Plasmoid.configuration.iconSize
@@ -235,6 +262,7 @@ Item {
         }
     }
 
+    // Full representation of the Plasmoid
     Plasmoid.fullRepresentation: Item {
         Layout.preferredWidth: 400 * PlasmaCore.Units.devicePixelRatio
         Layout.preferredHeight: 300 * PlasmaCore.Units.devicePixelRatio
@@ -287,6 +315,9 @@ Item {
         }
     }
 
+    // Main tooltip text for the Plasmoid
     Plasmoid.toolTipMainText: i18n("Switch Asus Battery Health Charging.")
+
+    // Subtext for the tooltip, indicating the current status
     Plasmoid.toolTipSubText: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
 }
