@@ -11,18 +11,7 @@ Item {
 
     property string pkexecPath: "/usr/bin/pkexec"
 
-    property string batteryHelthConfigPath
-
-    readonly property var const_COMMANDS: ({
-        "query": "cat " + root.batteryHelthConfigPath,
-        "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-        "balanced": "echo 80 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-        "full": "echo 100 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-        "findBatteryHelthConfigFile": "find /sys -name \"charge_control_end_threshold\"",
-        "findNotificationTool": "find /usr -type f -executable \\( -name \"notify-send\" -o -name \"zenity\" \\)",
-        // defined in findNotificationTool Connection
-        "sendNotification": () => ""
-    })
+    property string batteryHelthConfigPath: ""
 
     property var icons: ({
         "maximum": Qt.resolvedUrl("./image/maximum.png"),
@@ -34,6 +23,9 @@ Item {
     // This values can change after the execution of onCompleted().
     property string currentStatus: "full"
     property bool isCompatible: false
+
+    // The notification tool to use (e.g., "zenity" or "notify-send")
+    property string notificationTool: ""
 
     property string desiredStatus: "full"
     property bool loading: false
@@ -51,112 +43,53 @@ Item {
         findBatteryHelthConfigFile()
     }
 
-    PlasmaCore.DataSource {
+
+    CustomDataSource {
         id: queryStatusDataSource
-        engine: "executable"
-        connectedSources: []
-
-        onNewData: {
-            var exitCode = data["exit code"]
-            var exitStatus = data["exit status"]
-            var stdout = data["stdout"]
-            var stderr = data["stderr"]
-
-            exited(exitCode, exitStatus, stdout, stderr)
-            disconnectSource(sourceName)
-        }
-
-        function exec(cmd) {
-            connectSource(cmd)
-        }
-
-        signal exited(int exitCode, int exitStatus, string stdout, string stderr)
+        command: "cat " + root.batteryHelthConfigPath
     }
 
-
-    PlasmaCore.DataSource {
+    CustomDataSource {
         id: setStatusDataSource
-        engine: "executable"
-        connectedSources: []
 
-        onNewData: {
-            var exitCode = data["exit code"]
-            var exitStatus = data["exit status"]
-            var stdout = data["stdout"]
-            var stderr = data["stderr"]
+        // Dynamically set in switchStatus(). Set a default value to avoid errors at startup.
+        property string status: "full"
 
-            exited(exitCode, exitStatus, stdout, stderr)
-            disconnectSource(sourceName)
+        property var cmds: {
+            "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
+            "balanced": "echo 80 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
+            "full": "echo 100 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null"
         }
-
-        function exec(cmd) {
-            connectSource(cmd)
-        }
-
-        signal exited(int exitCode, int exitStatus, string stdout, string stderr)
+        command: cmds[status]
     }
 
-
-    PlasmaCore.DataSource {
+    CustomDataSource {
         id: findNotificationToolDataSource
-        engine: "executable"
-        connectedSources: []
-
-        onNewData: {
-            var exitCode = data["exit code"]
-            var exitStatus = data["exit status"]
-            var stdout = data["stdout"]
-            // stderr output can contain "permission denied" errors
-            var stderr = data["stderr"]
-
-            exited(exitCode, exitStatus, stdout, stderr)
-            disconnectSource(sourceName)
-        }
-
-        function exec(cmd) {
-            connectSource(cmd)
-        }
-
-        signal exited(int exitCode, int exitStatus, string stdout, string stderr)
+        command: "find /usr -type f -executable \\( -name \"notify-send\" -o -name \"zenity\" \\)"
     }
 
-
-    PlasmaCore.DataSource {
+    CustomDataSource {
         id: findBatteryHelthConfigFileDataSource
-        engine: "executable"
-        connectedSources: []
-
-        onNewData: {
-            var exitCode = data["exit code"]
-            var exitStatus = data["exit status"]
-            var stdout = data["stdout"]
-            // stderr output can contain "permission denied" errors
-            var stderr = data["stderr"]
-
-            exited(exitCode, exitStatus, stdout, stderr)
-            disconnectSource(sourceName)
-        }
-
-        function exec(cmd) {
-            connectSource(cmd)
-        }
-
-        signal exited(int exitCode, int exitStatus, string stdout, string stderr)
+        command: "find /sys -name \"charge_control_end_threshold\""
     }
 
 
-    PlasmaCore.DataSource {
+    CustomDataSource {
         id: sendNotification
-        engine: "executable"
-        connectedSources: []
 
-        onNewData: {
-            disconnectSource(sourceName)
-        }
+        // Dynamically set in showNotification(). Set a default value to avoid errors at startup.
+        property string tool: "notify-send"
 
-        function exec(cmd) {
-            connectSource(cmd)
+        property string iconURL: ""
+        property string title: ""
+        property string message: ""
+        property string options: ""
+
+        property var cmds: {
+            "notify-send": `notify-send -i ${iconURL} '${title}' '${message}' ${options}`,
+            "zenity": `zenity --notification --text='${title}\\n${message}' ${options}`
         }
+        command: cmds[tool]
     }
 
 
@@ -209,13 +142,15 @@ Item {
                 var path1 = paths[0]
                 var path2 = paths[1]
 
-                // prefer notify-send because it allows to use icon, zenity v3.44.0 does not accept icon option
+                // Prefer notify-send because it allows using an icon; zenity v3.44.0 does not accept an icon option
                 if (path1 && path1.trim().endsWith("notify-send")) {
-                    const_COMMANDS.sendNotification = (title, message, iconURL, options) => path1.trim() + " -i " + iconURL + " '" + title + "' '" + message + "'" + options
-                }if (path2 && path2.trim().endsWith("notify-send")) {
-                    const_COMMANDS.sendNotification = (title, message, iconURL, options) => path2.trim() + " -i " + iconURL + " '" + title + "' '" + message + "'" + options
-                }else if (path1 && path1.trim().endsWith("zenity")) {
-                    const_COMMANDS.sendNotification = (title, message, iconURL, options) => path1.trim() + " --notification --text='" + title + "\\n" + message + "'"
+                    root.notificationTool = "notify-send"
+                } else if (path2 && path2.trim().endsWith("notify-send")) {
+                    root.notificationTool = "notify-send"
+                } else if (path1 && path1.trim().endsWith("zenity")) {
+                    root.notificationTool = "zenity"
+                } else {
+                    console.warn("No compatible notification tool found.")
                 }
             }
         }
@@ -241,7 +176,7 @@ Item {
     // Get the current status
     function queryStatus() {
         root.loading = true
-        queryStatusDataSource.exec(const_COMMANDS.query)
+        queryStatusDataSource.exec()
     }
 
     function switchStatus() {
@@ -249,15 +184,23 @@ Item {
 
         showNotification(root.icons[root.desiredStatus], i18n("Switching status to %1.", root.desiredStatus.toUpperCase()))
 
-        setStatusDataSource.exec(const_COMMANDS[root.desiredStatus])
+        setStatusDataSource.status = root.desiredStatus
+        setStatusDataSource.exec()
     }
 
     function showNotification(iconURL: string, message: string, title = i18n("Asus Battery Health Switcher"), options = ""){
-        sendNotification.exec(const_COMMANDS.sendNotification(title, message, iconURL, options))
+        sendNotification.tool = root.notificationTool
+
+        sendNotification.iconURL = iconURL
+        sendNotification.title = message
+        sendNotification.message = title
+        sendNotification.options = options
+
+        sendNotification.exec()
     }
 
     function findNotificationTool() {
-        findNotificationToolDataSource.exec(const_COMMANDS.findNotificationTool)
+        findNotificationToolDataSource.exec()
     }
 
     function findBatteryHelthConfigFile() {
@@ -265,7 +208,7 @@ Item {
         if(Plasmoid.configuration.batteryHelthConfigFile){
             root.batteryHelthConfigPath = Plasmoid.configuration.batteryHelthConfigFile
         }else{
-            findBatteryHelthConfigFileDataSource.exec(const_COMMANDS.findBatteryHelthConfigFile)
+            findBatteryHelthConfigFileDataSource.exec()
         }
 
     }
