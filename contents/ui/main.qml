@@ -71,9 +71,10 @@ Item {
 
         // Commands to set different Asus Battery Health Charging modes
         property var cmds: {
-            "maximum": "echo 60 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-            "balanced": "echo 80 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null",
-            "full": "echo 100 | " + root.pkexecPath + " tee " + root.batteryHelthConfigPath + " 1>/dev/null"
+
+            "maximum": `echo 60 | ${root.pkexecPath} tee ${root.batteryHelthConfigPath} 1>/dev/null`,
+            "balanced": `echo 80 | ${root.pkexecPath} tee ${root.batteryHelthConfigPath} 1>/dev/null`,
+            "full": `echo 100 | ${root.pkexecPath} tee ${root.batteryHelthConfigPath} 1>/dev/null`
         }
         command: cmds[status]
     }
@@ -215,8 +216,8 @@ Item {
         sendNotification.tool = root.notificationTool
 
         sendNotification.iconURL = iconURL
-        sendNotification.title = message
-        sendNotification.message = title
+        sendNotification.title = title
+        sendNotification.message = message
         sendNotification.options = options
 
         sendNotification.exec()
