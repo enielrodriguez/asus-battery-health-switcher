@@ -216,8 +216,8 @@ Item {
         sendNotification.tool = root.notificationTool
 
         sendNotification.iconURL = iconURL
-        sendNotification.title = message
-        sendNotification.message = title
+        sendNotification.title = title
+        sendNotification.message = message
         sendNotification.options = options
 
         sendNotification.exec()
