@@ -1,0 +1,27 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "eniel160990@gmail.com",
+                "Name": "Eniel"
+            }
+        ],
+        "Category": "Hardware",
+        "Description": "Widget to turn on/off the Battery Health Charging feature in compatible Asus laptops.",
+        "Description[es]": "Widget para apagar/encender el modo Battery Health Charging en laptops Asus compatibles.",
+        "EnabledByDefault": true,
+        "Icon": "battery",
+        "Id": "asus-battery-health-switcher",
+        "License": "GPL3",
+        "Name": "Asus Battery Health Switcher",
+        "ServiceTypes": [
+            "Plasma/Applet"
+        ],
+        "Version": "1.0.1",
+        "Website": ""
+    },
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "X-Plasma-NotificationArea": "true",
+    "X-Plasma-NotificationAreaCategory": "Hardware"
+}
