@@ -45,11 +45,6 @@ Item {
     // Set the icon for the Plasmoid
     Plasmoid.icon: root.icon
 
-    // Connect to Plasmoid configuration to access user settings
-    Connections {
-        target: plasmoid.configuration
-    }
-
     // Executed when the component is completed
     Component.onCompleted: {
         findNotificationTool()
