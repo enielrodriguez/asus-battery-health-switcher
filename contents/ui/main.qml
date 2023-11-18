@@ -47,7 +47,7 @@ Item {
 
     // Connect to Plasmoid configuration to access user settings
     Connections {
-        target: Plasmoid.configuration
+        target: plasmoid.configuration
     }
 
     // Executed when the component is completed
@@ -231,8 +231,8 @@ Item {
     // Find the Asus Battery Health configuration file by executing the findBatteryHelthConfigFileDataSource
     function findBatteryHelthConfigFile() {
         // Check if the user defined the file path manually and use it if he did.
-        if(Plasmoid.configuration.batteryHelthConfigFile){
-            root.batteryHelthConfigPath = Plasmoid.configuration.batteryHelthConfigFile
+        if(plasmoid.configuration.batteryHelthConfigFile){
+            root.batteryHelthConfigPath = plasmoid.configuration.batteryHelthConfigFile
         }else{
             findBatteryHelthConfigFileDataSource.exec()
         }
@@ -245,8 +245,8 @@ Item {
     // Compact representation of the Plasmoid
     Plasmoid.compactRepresentation: Item {
         PlasmaCore.IconItem {
-            height: Plasmoid.configuration.iconSize
-            width: Plasmoid.configuration.iconSize
+            height: plasmoid.configuration.iconSize
+            width: plasmoid.configuration.iconSize
             anchors.centerIn: parent
 
             source: root.icon
