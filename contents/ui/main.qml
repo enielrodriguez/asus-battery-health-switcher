@@ -4,16 +4,10 @@ import QtQuick.Controls 2.0
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.plasmoid 2.0
-
+ 
 
 Item {
     id: root
-
-    // Path to the pkexec command-line tool for gaining root privileges
-    property string pkexecPath: "/usr/bin/pkexec"
-
-    // Path to the Asus Battery Health configuration file
-    property string batteryHelthConfigPath: ""
 
     // Icons for different status: "maximum," "balanced," "full," and "error"
     property var icons: ({
@@ -23,38 +17,26 @@ Item {
         "error": Qt.resolvedUrl("./image/error.png")
     })
 
-    // This property represents the current Asus Battery Health Charging status
-    // Note: This value can change after the execution of onCompleted().
-    property string currentStatus: "full"
-
-    // A flag indicating whether the widget is compatible with the system
-    property bool isCompatible: false
-
-    // The notification tool to use (e.g., "zenity" or "notify-send")
-    property string notificationTool: ""
-
     // The desired status for Asus Battery Health Charging
-    property string desiredStatus: "full"
+    property string desiredStatus: ""
 
     // A flag indicating if an operation is in progress
     property bool loading: false
 
-    // The currently displayed icon based on the current status
-    property string icon: root.icons[root.currentStatus]
-
+    // The currently displayed icon based on the current status. Default to error (incompatible)
+    property string icon: root.icons["error"]
     // Set the icon for the Plasmoid
     Plasmoid.icon: root.icon
 
     // Executed when the component is completed
     Component.onCompleted: {
-        findNotificationTool()
-        findBatteryHelthConfigFile()
-    }
+        init()
+    }    
 
     // CustomDataSource for querying the current Asus Battery Health Charging status
     CustomDataSource {
         id: queryStatusDataSource
-        command: "cat " + root.batteryHelthConfigPath
+        command: "cat " + plasmoid.configuration.batteryHealthConfigPath
     }
 
     // CustomDataSource for setting the Asus Battery Health Charging status
@@ -66,10 +48,9 @@ Item {
 
         // Commands to set different Asus Battery Health Charging modes
         property var cmds: {
-
-            "maximum": `echo 60 | ${root.pkexecPath} tee ${root.batteryHelthConfigPath} 1>/dev/null`,
-            "balanced": `echo 80 | ${root.pkexecPath} tee ${root.batteryHelthConfigPath} 1>/dev/null`,
-            "full": `echo 100 | ${root.pkexecPath} tee ${root.batteryHelthConfigPath} 1>/dev/null`
+            "maximum": `echo 60 | ${plasmoid.configuration.elevatedPivilegesTool} tee ${plasmoid.configuration.batteryHealthConfigPath} 1>/dev/null`,
+            "balanced": `echo 80 | ${plasmoid.configuration.elevatedPivilegesTool} tee ${plasmoid.configuration.batteryHealthConfigPath} 1>/dev/null`,
+            "full": `echo 100 | ${plasmoid.configuration.elevatedPivilegesTool} tee ${plasmoid.configuration.batteryHealthConfigPath} 1>/dev/null`
         }
         command: cmds[status]
     }
@@ -82,7 +63,7 @@ Item {
 
     // CustomDataSource for finding the Asus Battery Health configuration file
     CustomDataSource {
-        id: findBatteryHelthConfigFileDataSource
+        id: findBatteryHealthConfigFileDataSource
         command: "find /sys -name \"charge_control_end_threshold\""
     }
 
@@ -109,16 +90,31 @@ Item {
     // Connection for handling the queryStatusDataSource
     Connections {
         target: queryStatusDataSource
-        function onExited(exitCode, exitStatus, stdout, stderr){
+        function onExited(exitCode, exitStatus, stdout, stderr) {
             root.loading = false
-
+    
             if (stderr) {
                 root.icon = root.icons.error
                 showNotification(root.icons.error, stderr, stderr)
+                return
+            }
+    
+            var value = stdout.trim()
+            var statusMap = {
+                "60": "maximum",
+                "80": "balanced",
+                "100": "full"
+            }
+            
+            var currentStatus = statusMap[value]
+            var savedStatus = plasmoid.configuration.currentStatus
+    
+            if (savedStatus && savedStatus !== currentStatus) {
+                root.desiredStatus = savedStatus
+                switchStatus()
             } else {
-                var value = stdout.trim()
-                root.currentStatus = root.desiredStatus = value === "60" ? "maximum" : value === "80" ? "balanced" : "full"
-                root.isCompatible = true
+                plasmoid.configuration.currentStatus = root.desiredStatus = currentStatus
+                refreshIcon()
             }
         }
     }
@@ -130,19 +126,21 @@ Item {
         function onExited(exitCode, exitStatus, stdout, stderr){
             root.loading = false
 
-
             if(exitCode === 127){
                 showNotification(root.icons.error, i18n("Root privileges are required."))
-                root.desiredStatus = root.currentStatus
+                root.desiredStatus = plasmoid.configuration.currentStatus
                 return
             }
 
             if (stderr) {
                 showNotification(root.icons.error, stderr, stdout)
-            } else {
-                root.currentStatus = root.desiredStatus
-                showNotification(root.icons[root.currentStatus], i18n("Status switched to %1.", root.currentStatus.toUpperCase()))
+                return
             }
+            
+            plasmoid.configuration.currentStatus = root.desiredStatus
+            refreshIcon()
+            showNotification(root.icons[plasmoid.configuration.currentStatus], i18n("Status switched to %1.", plasmoid.configuration.currentStatus.toUpperCase()))
+            
         }
     }
 
@@ -150,45 +148,77 @@ Item {
     // Connection for finding the notification tool
     Connections {
         target: findNotificationToolDataSource
-        function onExited(exitCode, exitStatus, stdout, stderr){
-
+        function onExited(exitCode, exitStatus, stdout, stderr) {
+            root.loading = false
+    
+            var notificationTool = ""
+            const NOTIFY_SEND = "notify-send"
+            const ZENITY = "zenity"
+    
             if (stdout) {
-                // Many Linux distros have two notification tools
                 var paths = stdout.trim().split("\n")
-                var path1 = paths[0]
-                var path2 = paths[1]
-
+    
+                // Many Linux distros have two notification tools: notify-send and zenity
                 // Prefer notify-send because it allows using an icon; zenity v3.44.0 does not accept an icon option
-                if (path1 && path1.trim().endsWith("notify-send")) {
-                    root.notificationTool = "notify-send"
-                } else if (path2 && path2.trim().endsWith("notify-send")) {
-                    root.notificationTool = "notify-send"
-                } else if (path1 && path1.trim().endsWith("zenity")) {
-                    root.notificationTool = "zenity"
-                } else {
-                    console.warn("No compatible notification tool found.")
+                for (let currentPath of paths) {
+                    currentPath = currentPath.trim()
+    
+                    if (currentPath.endsWith(NOTIFY_SEND)) {
+                        notificationTool = NOTIFY_SEND
+                        break
+                    } else if (currentPath.endsWith(ZENITY)) {
+                        notificationTool = ZENITY
+                    }
                 }
             }
+    
+            if (notificationTool) {
+                plasmoid.configuration.notificationToolPath = notificationTool
+            } else {
+                console.warn("No compatible notification tool found.")
+            }
+    
+            findBatteryHealthConfigFile()
         }
     }
+    
 
 
     // Connection for finding the Asus Battery Health configuration file
     Connections {
-        target: findBatteryHelthConfigFileDataSource
-        function onExited(exitCode, exitStatus, stdout, stderr){
+        target: findBatteryHealthConfigFileDataSource
+        function onExited(exitCode, exitStatus, stdout, stderr) {
+            root.loading = false
+    
+            const trimmedOutput = stdout.trim()
+    
             // We assume that there can only be a single charge_control_end_threshold file.
-
-            if (stdout.trim()) {
-                root.batteryHelthConfigPath = stdout.trim()
+            if (trimmedOutput) {
+                plasmoid.configuration.batteryHealthConfigPath = trimmedOutput
+                plasmoid.configuration.isCompatible = true
                 queryStatus()
-            }else {
-                root.isCompatible = false
+            } else {
                 root.icon = root.icons.error
             }
         }
     }
 
+    Connections {
+        target: plasmoid.configuration
+        function onBatteryHealthConfigPathChanged(){
+            if(plasmoid.configuration.batteryHealthConfigPath){
+                plasmoid.configuration.isCompatible = true
+            }else {
+                plasmoid.configuration.isCompatible = false
+            }
+            findBatteryHealthConfigFile()
+        }
+    }
+
+
+    function refreshIcon(){
+        root.icon = root.icons[plasmoid.configuration.currentStatus ? plasmoid.configuration.currentStatus : "error"]
+    }
 
     // Get the current status by executing the queryStatusDataSource
     function queryStatus() {
@@ -208,30 +238,39 @@ Item {
 
     // Show a notification with icon, message, and title
     function showNotification(iconURL: string, message: string, title = i18n("Asus Battery Health Switcher"), options = ""){
-        sendNotification.tool = root.notificationTool
+        if(plasmoid.configuration.notificationToolPath){
+            sendNotification.tool = plasmoid.configuration.notificationToolPath
 
-        sendNotification.iconURL = iconURL
-        sendNotification.title = title
-        sendNotification.message = message
-        sendNotification.options = options
+            sendNotification.iconURL = iconURL
+            sendNotification.title = title
+            sendNotification.message = message
+            sendNotification.options = options
 
-        sendNotification.exec()
-    }
-
-    // Find the notification tool by executing the findNotificationToolDataSource
-    function findNotificationTool() {
-        findNotificationToolDataSource.exec()
-    }
-
-    // Find the Asus Battery Health configuration file by executing the findBatteryHelthConfigFileDataSource
-    function findBatteryHelthConfigFile() {
-        // Check if the user defined the file path manually and use it if he did.
-        if(plasmoid.configuration.batteryHelthConfigFile){
-            root.batteryHelthConfigPath = plasmoid.configuration.batteryHelthConfigFile
+            sendNotification.exec()
         }else{
-            findBatteryHelthConfigFileDataSource.exec()
+            console.warn(title + ": " + message)
+        }
+    }
+
+    // Find the notification tool and init the process
+    function init() {
+        if(!plasmoid.configuration.notificationToolPath){
+            findNotificationToolDataSource.exec()
+        } else {
+            findBatteryHealthConfigFile ()
+        }
+    }
+
+    // Find the Asus Battery Health configuration file by executing the findBatteryHealthConfigFileDataSource
+    function findBatteryHealthConfigFile() {
+        if(!plasmoid.configuration.batteryHealthConfigPath && !plasmoid.configuration.isCompatible){
+            root.loading = true
+            findBatteryHealthConfigFileDataSource.exec()
+            return
         }
 
+        queryStatus()
+        
     }
 
     // Set the preferred representation of the Plasmoid to the compact representation
@@ -277,14 +316,14 @@ Item {
 
             PlasmaComponents3.Label {
                 Layout.alignment: Qt.AlignCenter
-                text: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
+                text: plasmoid.configuration.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", plasmoid.configuration.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
             }
 
 
             PlasmaComponents3.ComboBox {
                 Layout.alignment: Qt.AlignCenter
 
-                enabled: !root.loading && root.isCompatible
+                enabled: !root.loading && plasmoid.configuration.isCompatible
                 model: [
                     {text: "Full Capacity", value: "full"},
                     {text: "Balanced (80%)", value: "balanced"},
@@ -295,8 +334,8 @@ Item {
                 currentIndex: model.findIndex((element) => element.value === root.desiredStatus)
 
                 onCurrentIndexChanged: {
-                    root.desiredStatus = model[currentIndex].value
-                    if (root.desiredStatus !== root.currentStatus) {
+                    root.desiredStatus = model[currentIndex].value                    
+                    if (plasmoid.configuration.currentStatus && root.desiredStatus !== plasmoid.configuration.currentStatus) {
                         switchStatus()
                     }
                 }
@@ -315,5 +354,5 @@ Item {
     Plasmoid.toolTipMainText: i18n("Switch Asus Battery Health Charging.")
 
     // Subtext for the tooltip, indicating the current status
-    Plasmoid.toolTipSubText: root.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", root.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
+    Plasmoid.toolTipSubText: plasmoid.configuration.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", plasmoid.configuration.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
 }
