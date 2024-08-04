@@ -41,8 +41,5 @@ Any recommendations and contributions are welcome.
 
 ## Screenshots
 
-![Screenshot_20230830_165209](https://github.com/enielrodriguez/asus-battery-health-switcher/assets/31964610/59805351-a326-42bb-b406-0857db47fa8c)
+![Screenshot_20240804_163702](https://github.com/user-attachments/assets/1d725319-f59c-4ce7-9e8a-23c2d5f53074)
 
-![Screenshot_20230830_165202](https://github.com/enielrodriguez/asus-battery-health-switcher/assets/31964610/a4268787-1065-4802-b82a-b5a4b29142ae)
-
-![Screenshot_20230830_165155](https://github.com/enielrodriguez/asus-battery-health-switcher/assets/31964610/fa7148e2-d446-4651-9ed0-13889043abf5)
