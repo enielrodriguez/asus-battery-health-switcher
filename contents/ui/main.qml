@@ -1,12 +1,12 @@
 import QtQuick 2.0
 import QtQuick.Layouts 1.0
 import QtQuick.Controls 2.0
-import org.kde.plasma.components 3.0 as PlasmaComponents3
-import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.plasmoid 2.0
+import org.kde.plasma.components as PlasmaComponents3
+import org.kde.kirigami as Kirigami
+import org.kde.plasma.plasmoid
  
 
-Item {
+PlasmoidItem {
     id: root
 
     // Icons for different status: "maximum," "balanced," "full," and "error"
@@ -273,12 +273,9 @@ Item {
         
     }
 
-    // Set the preferred representation of the Plasmoid to the compact representation
-    Plasmoid.preferredRepresentation: Plasmoid.compactRepresentation
-
     // Compact representation of the Plasmoid
-    Plasmoid.compactRepresentation: Item {
-        PlasmaCore.IconItem {
+    compactRepresentation: Item {
+        Kirigami.Icon {
             height: plasmoid.configuration.iconSize
             width: plasmoid.configuration.iconSize
             anchors.centerIn: parent
@@ -291,16 +288,16 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 onClicked: {
-                    plasmoid.expanded = !plasmoid.expanded
+                    expanded = !expanded
                 }
             }
         }
     }
 
     // Full representation of the Plasmoid
-    Plasmoid.fullRepresentation: Item {
-        Layout.preferredWidth: 400 * PlasmaCore.Units.devicePixelRatio
-        Layout.preferredHeight: 300 * PlasmaCore.Units.devicePixelRatio
+    fullRepresentation: Item {
+        Layout.preferredWidth: 400
+        Layout.preferredHeight: 300
 
         ColumnLayout {
             anchors.centerIn: parent
@@ -310,7 +307,7 @@ Item {
                 source: root.icon
                 Layout.alignment: Qt.AlignCenter
                 Layout.preferredHeight: 64
-                fillMode: Image.PreserveAspectFit
+                fillMode: Image.PreserveAspectFit               
             }
 
 
@@ -324,17 +321,27 @@ Item {
                 Layout.alignment: Qt.AlignCenter
 
                 enabled: !root.loading && plasmoid.configuration.isCompatible
-                model: [
-                    {text: "Full Capacity", value: "full"},
-                    {text: "Balanced (80%)", value: "balanced"},
-                    {text: "Maximum Lifespan (60%)", value: "maximum"}
-                ]
+                model: ListModel {
+                        ListElement { text: "Full Capacity"; value: "full" }
+                        ListElement { text: "Balanced (80%)"; value: "balanced" }
+                        ListElement { text: "Maximum Lifespan (60%)"; value: "maximum" }
+                }
+                
                 textRole: "text"
                 valueRole: "value"
-                currentIndex: model.findIndex((element) => element.value === root.desiredStatus)
 
-                onCurrentIndexChanged: {
-                    root.desiredStatus = model[currentIndex].value                    
+                Component.onCompleted: {
+                    // Manually iterate to find the index
+                    for (var i = 0; i < model.count; i++) {
+                        if (model.get(i).value === root.desiredStatus) {
+                            currentIndex = i;
+                            break;
+                        }
+                    }
+                }
+
+                onActivated: {
+                    root.desiredStatus = currentValue
                     if (plasmoid.configuration.currentStatus && root.desiredStatus !== plasmoid.configuration.currentStatus) {
                         switchStatus()
                     }
@@ -351,8 +358,8 @@ Item {
     }
 
     // Main tooltip text for the Plasmoid
-    Plasmoid.toolTipMainText: i18n("Switch Asus Battery Health Charging.")
+    toolTipMainText: i18n("Switch Asus Battery Health Charging.")
 
     // Subtext for the tooltip, indicating the current status
-    Plasmoid.toolTipSubText: plasmoid.configuration.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", plasmoid.configuration.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
+    toolTipSubText: plasmoid.configuration.isCompatible ? i18n("Asus Battery Health Charging is set to %1.", plasmoid.configuration.currentStatus.toUpperCase()) : i18n("The Asus Battery Health Charging feature is not available.")
 }
