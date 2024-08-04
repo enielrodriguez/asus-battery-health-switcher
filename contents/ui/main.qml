@@ -307,7 +307,7 @@ PlasmoidItem {
                 source: root.icon
                 Layout.alignment: Qt.AlignCenter
                 Layout.preferredHeight: 64
-                fillMode: Image.PreserveAspectFit               
+                fillMode: Image.PreserveAspectFit
             }
 
 
@@ -317,31 +317,21 @@ PlasmoidItem {
             }
 
 
-            PlasmaComponents3.ComboBox {
+            ComboBox {
                 Layout.alignment: Qt.AlignCenter
 
                 enabled: !root.loading && plasmoid.configuration.isCompatible
-                model: ListModel {
-                        ListElement { text: "Full Capacity"; value: "full" }
-                        ListElement { text: "Balanced (80%)"; value: "balanced" }
-                        ListElement { text: "Maximum Lifespan (60%)"; value: "maximum" }
-                }
-                
+                model: [
+                    {text: "Full Capacity", value: "full"},
+                    {text: "Balanced (80%)", value: "balanced"},
+                    {text: "Maximum Lifespan (60%)", value: "maximum"}
+                ]
                 textRole: "text"
                 valueRole: "value"
+                currentIndex: model.findIndex((element) => element.value === root.desiredStatus)
 
-                Component.onCompleted: {
-                    // Manually iterate to find the index
-                    for (var i = 0; i < model.count; i++) {
-                        if (model.get(i).value === root.desiredStatus) {
-                            currentIndex = i;
-                            break;
-                        }
-                    }
-                }
-
-                onActivated: {
-                    root.desiredStatus = currentValue
+                onCurrentIndexChanged: {
+                    root.desiredStatus = model[currentIndex].value                    
                     if (plasmoid.configuration.currentStatus && root.desiredStatus !== plasmoid.configuration.currentStatus) {
                         switchStatus()
                     }
